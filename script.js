@@ -31,6 +31,7 @@ function selectTab(tab) {
   tabs.forEach((item) => {
     const selected = item === tab;
     item.setAttribute('aria-selected', String(selected));
+    item.tabIndex = selected ? 0 : -1;
     document.getElementById(item.getAttribute('aria-controls')).hidden = !selected;
   });
   tab.focus();
@@ -64,6 +65,21 @@ function closeModal() {
 openModalButton.addEventListener('click', openModal);
 modal.querySelectorAll('[data-close-modal]').forEach((item) => item.addEventListener('click', closeModal));
 document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && !modal.hidden) closeModal(); });
+modal.addEventListener('keydown', (event) => {
+  if (event.key !== 'Tab') return;
+  const focusable = [...modal.querySelectorAll('button, a[href], input, select, textarea, [tabindex]:not([tabindex="-1"])')]
+    .filter((item) => !item.disabled && !item.hidden);
+  if (!focusable.length) return;
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
+});
 
 const form = document.getElementById('rsvp-form');
 const formError = document.getElementById('form-error');
@@ -83,9 +99,14 @@ function collectRsvpData(formData) {
 }
 
 function saveRsvp(data) {
-  const submissions = JSON.parse(localStorage.getItem('princeMillsRsvps') || '[]');
-  submissions.push(data);
-  localStorage.setItem('princeMillsRsvps', JSON.stringify(submissions));
+  try {
+    const submissions = JSON.parse(localStorage.getItem('princeMillsRsvps') || '[]');
+    submissions.push(data);
+    localStorage.setItem('princeMillsRsvps', JSON.stringify(submissions));
+    return true;
+  } catch (error) {
+    return false;
+  }
 }
 
 function createRsvpFile(data) {
@@ -102,7 +123,8 @@ function createRsvpFile(data) {
     '----------------------------------------',
     ...Object.entries(data).map(([key, value]) => `${labels[key] || key}: ${Array.isArray(value) ? value.join(', ') || 'None selected' : value || 'Not provided'}`)
   ];
-  return new File([lines.join('\n')], `Prince-Mills-RSVP-${data.firstName}-${data.lastName}.txt`, { type: 'text/plain' });
+  const safeName = `${data.firstName}-${data.lastName}`.replace(/[^a-z0-9-]+/gi, '-');
+  return new File([lines.join('\n')], `Prince-Mills-RSVP-${safeName}.txt`, { type: 'text/plain' });
 }
 
 async function emailRsvp(data, originalFormData) {
@@ -143,7 +165,7 @@ form.addEventListener('submit', async (event) => {
 
   const originalFormData = new FormData(form);
   const rsvpData = collectRsvpData(originalFormData);
-  saveRsvp(rsvpData);
+  const savedLocally = saveRsvp(rsvpData);
 
   try {
     await emailRsvp(rsvpData, originalFormData);
@@ -152,6 +174,9 @@ form.addEventListener('submit', async (event) => {
     successMessage.hidden = false;
     successMessage.focus();
   } catch (error) {
+    deliveryError.textContent = savedLocally
+      ? 'Your RSVP was saved on this device, but the email could not be sent. Please check your connection and try again.'
+      : 'Your RSVP could not be sent or saved. Please check your connection and try again.';
     deliveryError.hidden = false;
     deliveryError.focus();
   } finally {
@@ -159,11 +184,3 @@ form.addEventListener('submit', async (event) => {
     submitButton.textContent = 'Submit My RSVP';
   }
 });
-
-const toast = document.getElementById('toast');
-document.querySelectorAll('[data-placeholder]').forEach((link) => link.addEventListener('click', (event) => {
-  event.preventDefault();
-  toast.textContent = link.dataset.placeholder;
-  toast.classList.add('show');
-  window.setTimeout(() => toast.classList.remove('show'), 3000);
-}));
