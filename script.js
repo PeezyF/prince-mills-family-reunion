@@ -86,10 +86,44 @@ const formError = document.getElementById('form-error');
 const deliveryError = document.getElementById('delivery-error');
 const successMessage = document.getElementById('success-message');
 const submitButton = form.querySelector('.submit-button');
+const adultsInput = form.elements.adults;
+const childrenInput = form.elements.children;
+const shirtSizeGrid = document.getElementById('shirt-size-grid');
+const shirtSizeOptions = ['Child XS', 'Child S', 'Child M', 'Child L', 'Adult S', 'Adult M', 'Adult L', 'Adult XL', 'Adult 2XL', 'Adult 3XL', 'Adult 4XL'];
+
+function attendeeCount(input) {
+  const count = Number.parseInt(input.value, 10);
+  return Number.isFinite(count) ? Math.min(20, Math.max(0, count)) : 0;
+}
+
+function updateShirtSizeFields() {
+  const existingSizes = [...shirtSizeGrid.querySelectorAll('select')].map((select) => select.value);
+  const attendees = [
+    ...Array.from({ length: attendeeCount(adultsInput) }, (_, index) => `Adult ${index + 1}`),
+    ...Array.from({ length: attendeeCount(childrenInput) }, (_, index) => `Child ${index + 1}`)
+  ];
+
+  shirtSizeGrid.replaceChildren(...attendees.map((attendee, index) => {
+    const label = document.createElement('label');
+    label.textContent = `${attendee} T-shirt size`;
+    const select = document.createElement('select');
+    select.name = 'shirtSizes';
+    select.setAttribute('aria-label', `${attendee} T-shirt size`);
+    select.append(new Option('Choose a size', ''), ...shirtSizeOptions.map((size) => new Option(size, size)));
+    select.value = existingSizes[index] || '';
+    label.append(select);
+    return label;
+  }));
+}
+
+[adultsInput, childrenInput].forEach((input) => input.addEventListener('input', updateShirtSizeFields));
+form.addEventListener('reset', () => setTimeout(updateShirtSizeFields));
+updateShirtSizeFields();
 
 function collectRsvpData(formData) {
   const data = Object.fromEntries(formData.entries());
   data.events = formData.getAll('events');
+  data.shirtSizes = formData.getAll('shirtSizes').filter(Boolean);
   data.submittedAt = new Date().toISOString();
   delete data.confirmation;
   delete data._subject;
@@ -113,7 +147,7 @@ function createRsvpFile(data) {
   const labels = {
     firstName: 'First name', lastName: 'Last name', email: 'Email', phone: 'Phone',
     cityState: 'City and state', familySide: 'Family side', adults: 'Adults attending',
-    children: 'Children attending', shirtSize: 'T-shirt size', dietary: 'Dietary restrictions',
+    children: 'Children attending', shirtSizes: 'T-shirt sizes', dietary: 'Dietary restrictions',
     emergencyName: 'Emergency contact name', emergencyPhone: 'Emergency contact phone',
     notes: 'Special notes', attendance: 'Attending', events: 'Events', submittedAt: 'Submitted at'
   };

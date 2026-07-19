@@ -122,4 +122,12 @@ body{background:var(--black);color:#f8f3e9}
   .modal-content{max-height:calc(100svh - 16px);padding:16px 10px}
   .modal-content h2{font-size:34px}
   .modal .schedule-poster{margin-top:10px}
+  .shirt-size-grid{grid-template-columns:1fr}
 }
+
+.shirt-sizes>p{margin:0;font-weight:700}
+.shirt-sizes>.field-help{display:block;margin:0 0 12px}
+.shirt-size-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:22px}
+.shirt-size-grid label{display:flex;flex-direction:column;gap:6px;font-weight:700}
+
+@media(max-width:620px){.shirt-size-grid{grid-template-columns:1fr}}
