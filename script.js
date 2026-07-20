@@ -166,6 +166,10 @@ async function emailRsvp(data, originalFormData) {
   originalFormData.forEach((value, key) => {
     if (key !== 'confirmation' && key !== '_honey') emailData.append(key, value);
   });
+  // FormSubmit's table template can collapse repeated fields to a single value.
+  // Send multi-select answers as one readable field so every choice reaches the email.
+  emailData.set('shirtSizes', data.shirtSizes.join(', ') || 'None selected');
+  emailData.set('events', data.events.join(', ') || 'None selected');
   emailData.set('_subject', `New RSVP: ${data.firstName} ${data.lastName} — Prince + Mills Reunion`);
   emailData.set('_template', 'table');
   emailData.set('_replyto', data.email);
